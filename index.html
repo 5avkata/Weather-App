@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Weather App</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="app">
+        
+        <!-- Main Container -->
+        <div class="weather-container">
+
+            <!-- Header with search -->
+            <div class="header">
+                <div class="search-wrapper">
+                    <form id="search-form" class="search-form" autocomplete="off">
+                        <i class="fas fa-search search-icon"></i>
+                        <div class="search-input-wrapper">
+                            <input type="text" id="search-input" placeholder="Enter city name...">
+                            <div id="suggestions-dropdown" class="suggestions-dropdown"></div>
+                        </div>
+                        <button type="button" id="location-btn" class="location-btn">
+                            <i class="fas fa-location-dot"></i>
+                        </button>
+                        <button type="submit" class="submit-btn">→</button>
+                    </form>
+                    
+                    <div class="history-header">
+                        <span class="history-label">Recent searches:</span>
+                        <button id="clear-history-btn" class="clear-history-btn">
+                            <i class="fas fa-trash-alt"></i> Clear all
+                        </button>
+                    </div>
+                    <div id="search-history" class="history-buttons"></div>
+                </div>
+            </div>
+
+            <!-- Skeleton Loader -->
+            <div id="skeleton-loader" class="skeleton-loader">
+                <div class="skeleton-city"></div>
+                <div class="skeleton-temp"></div>
+                <div class="skeleton-stats">
+                    <div class="skeleton-stat"></div>
+                    <div class="skeleton-stat"></div>
+                    <div class="skeleton-stat"></div>
+                    <div class="skeleton-stat"></div>
+                </div>
+                <div class="skeleton-tips"></div>
+                <div class="skeleton-forecast">
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                </div>
+            </div>
+
+            <!-- Weather Hero Section -->
+            <div id="weather-info" class="weather-hero" style="display: none;">
+                <div class="city-header">
+                    <h1 id="city-name">Sofia, Bulgaria</h1>
+                    <p id="weather-condition" class="condition-text">Overcast</p>
+                </div>
+
+                <div class="temp-section">
+                    <div class="temp-main">
+                        <i id="weather-icon" class="fas fa-cloud"></i>
+                        <div class="temp-value">
+                            <span id="temperature">18</span>
+                            <span class="temp-unit-wrapper">
+                                <button id="toggle-unit" class="unit-btn">°C</button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Weather Stats Row -->
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <i class="fas fa-tint"></i>
+                        <div class="stat-info">
+                            <span class="stat-label">Humidity</span>
+                            <span id="humidity" class="stat-value">38%</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-wind"></i>
+                        <div class="stat-info">
+                            <span class="stat-label">Wind</span>
+                            <span id="wind-speed" class="stat-value">5.5 km/h</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-temperature-low"></i>
+                        <div class="stat-info">
+                            <span class="stat-label">Feels Like</span>
+                            <span id="feels-like" class="stat-value">17°C</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-sun"></i>
+                        <div class="stat-info">
+                            <span class="stat-label">UV Index</span>
+                            <span id="uv-index" class="stat-value">--</span>
+                            <span id="uv-level" class="uv-badge"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Forecast / Smart Tips Section -->
+            <div class="tips-section" id="tips-section" style="display: none;">
+                <h3 class="section-title">
+                    <i class="fas fa-magic"></i> QUICK FORECAST
+                </h3>
+                <div class="tips-grid" id="tips-grid">
+                    <!-- Dynamic tips will appear here -->
+                </div>
+            </div>
+
+            <!-- 5-Day Forecast -->
+            <div class="forecast-section" id="forecast-section" style="display: none;">
+                <h3 class="section-title">
+                    <i class="fas fa-calendar-week"></i> TODAY'S TEMPERATURE
+                </h3>
+                <div id="forecast-cards" class="forecast-scroll">
+                    <!-- Forecast cards will appear here -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Toast Messages -->
+    <div id="loading" class="toast">Loading...</div>
+    <div id="error" class="toast error">Error</div>
+
+    <script type="module" src="js/app.js"></script>
+
+</body>
+</html>
