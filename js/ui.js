@@ -39,16 +39,23 @@ export function showContent(DOM) {
     if (DOM.skeletonLoader) DOM.skeletonLoader.style.display = "none";
 }
 
-export function updateTemperatureDisplay(DOM, temp, isCelsius) {
+export function updateTemperatureDisplay(DOM, temp, isCelsius, feelsLikeCelsius = null) {
     if (temp === null || temp === undefined) return;
 
     if (isCelsius) {
         DOM.temperature.textContent = `${temp}`;
         if (DOM.toggleButton) DOM.toggleButton.textContent = "°C";
+        if (DOM.feelsLike && feelsLikeCelsius !== null && feelsLikeCelsius !== undefined) {
+            DOM.feelsLike.textContent = `${Math.round(feelsLikeCelsius)}°C`;
+        }
     } else {
         const fahrenheit = (temp * 9) / 5 + 32;
         DOM.temperature.textContent = `${fahrenheit.toFixed(0)}`;
         if (DOM.toggleButton) DOM.toggleButton.textContent = "°F";
+        if (DOM.feelsLike && feelsLikeCelsius !== null && feelsLikeCelsius !== undefined) {
+            const feelsLikeFahrenheit = (feelsLikeCelsius * 9) / 5 + 32;
+            DOM.feelsLike.textContent = `${Math.round(feelsLikeFahrenheit)}°F`;
+        }
     }
 }
 

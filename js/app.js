@@ -1,5 +1,6 @@
 import { fetchWeather } from "./api.js";
-import { renderHistory, showError, updateTemperatureDisplay, renderForecast, renderSmartTips, showLoading, hideLoading, showContent } from "./ui.js";
+import { getWeatherCondition, getWeatherIcon } from "./weather-codes.js";
+import { renderHistory, showError, updateTemperatureDisplay, showLoading, hideLoading } from "./ui.js";
 
 const DOM = {
     searchForm: document.getElementById("search-form"),
@@ -29,8 +30,18 @@ const DOM = {
 
 let isCelsius = true;
 let lastCelsius = null;
+let lastFeelsLikeCelsius = null;
 let currentSuggestions = [];
 let selectedSuggestionIndex = -1;
+
+function getIsCelsius() { return isCelsius; }
+function getLastTemp() { return lastCelsius; }
+function setLastTemp(temp) { lastCelsius = temp; }
+function setLastFeelsLike(temp) { lastFeelsLikeCelsius = temp; }
+
+function doFetchWeather(city) {
+    fetchWeather(city, DOM, getIsCelsius, getLastTemp, setLastTemp, setLastFeelsLike);
+}
 
 function debounce(func, delay) {
     let timeout;
@@ -83,7 +94,7 @@ function renderSuggestions(suggestions) {
         item.addEventListener("click", () => {
             DOM.searchInput.value = suggestion.name;
             DOM.suggestionsDropdown.classList.remove("show");
-            fetchWeather(suggestion.name, DOM, () => isCelsius, () => lastCelsius, (temp) => (lastCelsius = temp));
+            doFetchWeather(suggestion.name);
         });
         DOM.suggestionsDropdown.appendChild(item);
     });
@@ -109,7 +120,7 @@ function handleKeyboardNavigation(e) {
                 const selected = currentSuggestions[selectedSuggestionIndex];
                 DOM.searchInput.value = selected.name;
                 DOM.suggestionsDropdown.classList.remove("show");
-                fetchWeather(selected.name, DOM, () => isCelsius, () => lastCelsius, (temp) => (lastCelsius = temp));
+                doFetchWeather(selected.name);
                 selectedSuggestionIndex = -1;
             }
             break;
@@ -149,46 +160,26 @@ async function loadWeatherByLocation() {
         async (position) => {
             const { latitude, longitude } = position.coords;
 
+            let cityName = null;
             try {
-                const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&hourly=apparent_temperature,relativehumidity_2m&daily=temperature_2m_max,temperature_2m_min,weathercode,uv_index_max&timezone=auto`;
-                const response = await fetch(weatherUrl);
-                const data = await response.json();
-                
-                const current = data.current_weather;
-                const feelsLike = data.hourly?.apparent_temperature?.[0];
-                const humidity = data.hourly?.relativehumidity_2m?.[0];
-                const uvIndex = data.daily?.uv_index_max?.[0];
+                const reverseUrl = `https://geocoding-api.open-meteo.com/v1/search?latitude=${latitude}&longitude=${longitude}&count=1`;
+                const reverseRes = await fetch(reverseUrl);
+                const reverseData = await reverseRes.json();
+                cityName = reverseData.results?.[0]?.name ?? null;
+            } catch (e) {
+                // reverse geocode failed; fall back to coordinate-direct fetch
+            }
 
-                lastCelsius = current.temperature;
-                updateTemperatureDisplay(DOM, lastCelsius, isCelsius);
-
-                DOM.cityName.textContent = "📍 Current Location";
-                DOM.windSpeed.textContent = `${current.windspeed} km/h`;
-
-                if (DOM.feelsLike && feelsLike !== undefined) {
-                    DOM.feelsLike.textContent = `${Math.round(feelsLike)}°C`;
-                }
-                if (DOM.humidity && humidity !== undefined) {
-                    DOM.humidity.textContent = `${Math.round(humidity)}%`;
-                }
-
-                if (data.daily) {
-                    renderForecast(DOM, data.daily);
-                }
-                if (DOM.tipsGrid) {
-                    renderSmartTips(DOM, current.temperature, current.weathercode, uvIndex);
-                }
-
-                showContent(DOM);
-
-            } catch (error) {
-                console.error("Error:", error);
-                showError(DOM, "Failed to load weather data");
+            if (cityName) {
+                fetchWeather(cityName, DOM, getIsCelsius, getLastTemp, setLastTemp, setLastFeelsLike);
+            } else {
+                fetchWeather("📍 Current Location", DOM, getIsCelsius, getLastTemp, setLastTemp, setLastFeelsLike, { latitude, longitude });
             }
         },
         (error) => {
             console.error("Geolocation error:", error);
             showError(DOM, "Geolocation permission denied");
+            hideLoading(DOM);
         }
     );
 }
@@ -203,12 +194,12 @@ DOM.searchForm.addEventListener("submit", function (e) {
     }
 
     DOM.suggestionsDropdown.classList.remove("show");
-    fetchWeather(city, DOM, () => isCelsius, () => lastCelsius, (temp) => (lastCelsius = temp));
+    doFetchWeather(city);
 });
 
 DOM.toggleButton.addEventListener("click", function () {
     isCelsius = !isCelsius;
-    updateTemperatureDisplay(DOM, lastCelsius, isCelsius);
+    updateTemperatureDisplay(DOM, lastCelsius, isCelsius, lastFeelsLikeCelsius);
 });
 
 if (DOM.locationBtn) {
@@ -222,9 +213,7 @@ if (clearHistoryBtn) {
     clearHistoryBtn.addEventListener("click", function() {
         if (confirm("Are you sure you want to clear all search history?")) {
             localStorage.removeItem("history");
-            renderHistory(DOM, (city) =>
-                fetchWeather(city, DOM, () => isCelsius, () => lastCelsius, (temp) => (lastCelsius = temp))
-            );
+            renderHistory(DOM, doFetchWeather);
             showError(DOM, "History cleared!");
             setTimeout(() => {
                 if (DOM.errorDiv) DOM.errorDiv.style.display = "none";
@@ -233,8 +222,6 @@ if (clearHistoryBtn) {
     });
 }
 
-renderHistory(DOM, (city) =>
-    fetchWeather(city, DOM, () => isCelsius, () => lastCelsius, (temp) => (lastCelsius = temp))
-);
+renderHistory(DOM, doFetchWeather);
 
 loadWeatherByLocation();
