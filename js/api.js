@@ -1,5 +1,5 @@
 import { getWeatherCondition, getWeatherIcon } from "./weather-codes.js";
-import { showLoading, hideLoading, showError, updateTemperatureDisplay, saveToHistory, renderHistory, renderForecast, renderSmartTips, showContent } from "./ui.js";
+import { showLoading, hideLoading, showError, updateTemperatureDisplay, saveToHistory, renderHistory, renderForecast, renderSmartTips, showContent, updateWeatherBackground } from "./ui.js";
 
 function getUVLevel(uv) {
     if (uv == null) return { text: "", color: "#a5b4fc" };
@@ -10,7 +10,16 @@ function getUVLevel(uv) {
     return { text: "Extreme", color: "#7c3aed" };
 }
 
-// coords is optional {latitude, longitude} — when provided, skips geocoding and uses city as display name
+/**
+ * Gets weather data for a city or direct coordinates and updates the UI.
+ * @param {string} city - City name or display label for coordinate-based weather.
+ * @param {Object} DOM - Object containing all DOM references used by the app.
+ * @param {Function} isCelsius - Returns true when the current unit is Celsius.
+ * @param {Function} getLastTemp - Returns the latest Celsius temperature.
+ * @param {Function} setLastTemp - Stores the latest Celsius temperature.
+ * @param {Function} setLastFeelsLike - Stores the latest apparent temperature in Celsius.
+ * @param {{latitude: number, longitude: number} | null} coords - Optional coordinates that skip geocoding.
+ */
 export async function fetchWeather(city, DOM, isCelsius, getLastTemp, setLastTemp, setLastFeelsLike = () => {}, coords = null) {
     showLoading(DOM);
 
@@ -22,6 +31,7 @@ export async function fetchWeather(city, DOM, isCelsius, getLastTemp, setLastTem
             longitude = coords.longitude;
             name = city;
         } else {
+            // The weather API needs coordinates, so a city search starts with geocoding.
             const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en`;
             const geoRes = await fetch(geoUrl);
             const geoData = await geoRes.json();
@@ -33,14 +43,16 @@ export async function fetchWeather(city, DOM, isCelsius, getLastTemp, setLastTem
             ({ latitude, longitude, name } = geoData.results[0]);
         }
 
+        // One forecast request returns current weather, forecast data, humidity, feels-like temperature, and UV index.
         const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&hourly=apparent_temperature,relativehumidity_2m&daily=temperature_2m_max,temperature_2m_min,weathercode,uv_index_max&timezone=auto`;
         const weatherRes = await fetch(weatherUrl);
         const weatherData = await weatherRes.json();
 
         const current = weatherData.current_weather;
-        const currentHour = new Date(current.time).getHours();
-        const feelsLike = weatherData.hourly?.apparent_temperature?.[currentHour];
-        const humidity = weatherData.hourly?.relativehumidity_2m?.[currentHour];
+        // Match current_weather.time to the hourly arrays so humidity and feels-like use the same hour.
+        const hourlyIndex = weatherData.hourly?.time?.indexOf(current.time) ?? -1;
+        const feelsLike = hourlyIndex >= 0 ? weatherData.hourly?.apparent_temperature?.[hourlyIndex] : null;
+        const humidity = hourlyIndex >= 0 ? weatherData.hourly?.relativehumidity_2m?.[hourlyIndex] : null;
         const uvIndex = weatherData.daily?.uv_index_max?.[0];
         const uv = getUVLevel(uvIndex);
 
@@ -52,6 +64,7 @@ export async function fetchWeather(city, DOM, isCelsius, getLastTemp, setLastTem
         DOM.weatherCondition.textContent = getWeatherCondition(current.weathercode);
         DOM.windSpeed.textContent = `${current.windspeed} km/h`;
         DOM.weatherIcon.className = getWeatherIcon(current.weathercode);
+        updateWeatherBackground(current.weathercode);
 
         if (DOM.humidity && humidity !== undefined) {
             DOM.humidity.textContent = `${Math.round(humidity)}%`;

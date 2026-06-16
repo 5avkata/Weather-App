@@ -1,3 +1,8 @@
+/**
+ * Converts an Open-Meteo weather code to a readable condition.
+ * @param {number} code - Open-Meteo weather code.
+ * @returns {string} Weather description.
+ */
 export function getWeatherCondition(code) {
     const conditions = {
         0: "Clear sky",
@@ -24,6 +29,11 @@ export function getWeatherCondition(code) {
     return conditions[code] || "Unknown";
 }
 
+/**
+ * Converts an Open-Meteo weather code to a Font Awesome icon class.
+ * @param {number} code - Open-Meteo weather code.
+ * @returns {string} Font Awesome class name.
+ */
 export function getWeatherIcon(code) {
     const icons = {
         0: "fas fa-sun",

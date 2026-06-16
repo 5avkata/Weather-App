@@ -1,8 +1,8 @@
 import { getWeatherIcon, getWeatherCondition } from "./weather-codes.js";
 
 export function showLoading(DOM) {
-    // Show skeleton loader, hide everything else
     if (DOM.skeletonLoader) DOM.skeletonLoader.style.display = "block";
+    if (DOM.loadingDiv) DOM.loadingDiv.style.display = "block";
     if (DOM.weatherInfo) DOM.weatherInfo.style.display = "none";
     if (DOM.tipsSection) DOM.tipsSection.style.display = "none";
     if (DOM.forecastSection) DOM.forecastSection.style.display = "none";
@@ -10,15 +10,21 @@ export function showLoading(DOM) {
 }
 
 export function hideLoading(DOM) {
-    // Hide skeleton loader
     if (DOM.skeletonLoader) DOM.skeletonLoader.style.display = "none";
+    if (DOM.loadingDiv) DOM.loadingDiv.style.display = "none";
 }
 
+/**
+ * Displays an error message and hides weather sections that may contain stale data.
+ * @param {Object} DOM - Object with cached DOM references.
+ * @param {string} message - Message shown to the user.
+ */
 export function showError(DOM, message) {
     if (DOM.errorDiv) {
         DOM.errorDiv.textContent = message;
         DOM.errorDiv.style.display = "block";
     }
+    if (DOM.loadingDiv) DOM.loadingDiv.style.display = "none";
     if (DOM.skeletonLoader) DOM.skeletonLoader.style.display = "none";
     if (DOM.weatherInfo) DOM.weatherInfo.style.display = "none";
     if (DOM.tipsSection) DOM.tipsSection.style.display = "none";
@@ -32,13 +38,50 @@ export function showError(DOM, message) {
 }
 
 export function showContent(DOM) {
-    // Show all content after loading
     if (DOM.weatherInfo) DOM.weatherInfo.style.display = "block";
     if (DOM.tipsSection) DOM.tipsSection.style.display = "block";
     if (DOM.forecastSection) DOM.forecastSection.style.display = "block";
     if (DOM.skeletonLoader) DOM.skeletonLoader.style.display = "none";
 }
 
+/**
+ * Changes the page background according to the current Open-Meteo weather code.
+ * @param {number} weatherCode - Open-Meteo weather code.
+ */
+export function updateWeatherBackground(weatherCode) {
+    const weatherClasses = [
+        "weather-sunny",
+        "weather-cloudy",
+        "weather-rainy",
+        "weather-snowy",
+        "weather-foggy",
+        "weather-stormy"
+    ];
+
+    document.body.classList.remove(...weatherClasses);
+
+    if ([0, 1].includes(weatherCode)) {
+        document.body.classList.add("weather-sunny");
+    } else if ([2, 3].includes(weatherCode)) {
+        document.body.classList.add("weather-cloudy");
+    } else if ([45, 48].includes(weatherCode)) {
+        document.body.classList.add("weather-foggy");
+    } else if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(weatherCode)) {
+        document.body.classList.add("weather-rainy");
+    } else if ([71, 73, 75].includes(weatherCode)) {
+        document.body.classList.add("weather-snowy");
+    } else if ([95].includes(weatherCode)) {
+        document.body.classList.add("weather-stormy");
+    }
+}
+
+/**
+ * Updates the main temperature and apparent temperature without making a new API request.
+ * @param {Object} DOM - Object with cached DOM references.
+ * @param {number} temp - Current temperature in Celsius.
+ * @param {boolean} isCelsius - Whether the UI should show Celsius.
+ * @param {number | null} feelsLikeCelsius - Apparent temperature in Celsius.
+ */
 export function updateTemperatureDisplay(DOM, temp, isCelsius, feelsLikeCelsius = null) {
     if (temp === null || temp === undefined) return;
 
@@ -59,6 +102,10 @@ export function updateTemperatureDisplay(DOM, temp, isCelsius, feelsLikeCelsius 
     }
 }
 
+/**
+ * Saves a city to localStorage while keeping only the five most recent searches.
+ * @param {string} city - City name to save.
+ */
 export function saveToHistory(city) {
     let history = JSON.parse(localStorage.getItem("history")) || [];
     const cityLower = city.toLowerCase();
@@ -70,6 +117,11 @@ export function saveToHistory(city) {
     localStorage.setItem("history", JSON.stringify(history));
 }
 
+/**
+ * Renders saved search history and connects each city to a new weather request.
+ * @param {Object} DOM - Object with cached DOM references.
+ * @param {Function} fetchWeather - Function called when a history item is selected.
+ */
 export function renderHistory(DOM, fetchWeather) {
     let history = JSON.parse(localStorage.getItem("history")) || [];
 
@@ -105,6 +157,11 @@ export function renderHistory(DOM, fetchWeather) {
     });
 }
 
+/**
+ * Renders the next five days of forecast cards.
+ * @param {Object} DOM - Object with cached DOM references.
+ * @param {Object} dailyData - Daily weather data returned from Open-Meteo.
+ */
 export function renderForecast(DOM, dailyData) {
     if (!DOM.forecastCards) return;
 
@@ -133,6 +190,13 @@ export function renderForecast(DOM, dailyData) {
     DOM.forecastCards.style.display = "flex";
 }
 
+/**
+ * Generates short practical tips from the current weather conditions.
+ * @param {Object} DOM - Object with cached DOM references.
+ * @param {number} temp - Current temperature in Celsius.
+ * @param {number} weatherCode - Open-Meteo weather code.
+ * @param {number | undefined} uvIndex - Current day's UV index.
+ */
 export function renderSmartTips(DOM, temp, weatherCode, uvIndex) {
     if (!DOM.tipsGrid) return;
 

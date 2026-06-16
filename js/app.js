@@ -1,5 +1,4 @@
 import { fetchWeather } from "./api.js";
-import { getWeatherCondition, getWeatherIcon } from "./weather-codes.js";
 import { renderHistory, showError, updateTemperatureDisplay, showLoading, hideLoading } from "./ui.js";
 
 const DOM = {
@@ -28,6 +27,7 @@ const DOM = {
     forecastSection: document.getElementById("forecast-section")
 };
 
+// State shared between searches and the unit switch.
 let isCelsius = true;
 let lastCelsius = null;
 let lastFeelsLikeCelsius = null;
@@ -39,10 +39,20 @@ function getLastTemp() { return lastCelsius; }
 function setLastTemp(temp) { lastCelsius = temp; }
 function setLastFeelsLike(temp) { lastFeelsLikeCelsius = temp; }
 
+/**
+ * Fetches weather for a typed city and keeps shared app state in one place.
+ * @param {string} city - City name entered by the user.
+ */
 function doFetchWeather(city) {
     fetchWeather(city, DOM, getIsCelsius, getLastTemp, setLastTemp, setLastFeelsLike);
 }
 
+/**
+ * Creates a delayed version of a function to avoid too many API calls while typing.
+ * @param {Function} func - Function to run after the delay.
+ * @param {number} delay - Delay in milliseconds.
+ * @returns {Function} Debounced function.
+ */
 function debounce(func, delay) {
     let timeout;
     return function(...args) {
@@ -51,6 +61,10 @@ function debounce(func, delay) {
     };
 }
 
+/**
+ * Loads city suggestions from Open-Meteo's geocoding API.
+ * @param {string} query - Partial city name from the search input.
+ */
 async function fetchCitySuggestions(query) {
     if (query.length < 2) {
         DOM.suggestionsDropdown.classList.remove("show");
@@ -131,6 +145,7 @@ function handleKeyboardNavigation(e) {
     }
 }
 
+// Search suggestions are debounced so typing does not send a request for every key press.
 const debouncedFetchSuggestions = debounce(fetchCitySuggestions, 300);
 
 DOM.searchInput.addEventListener("input", (e) => {
@@ -148,6 +163,9 @@ document.addEventListener("click", (e) => {
     }
 });
 
+/**
+ * Uses browser geolocation and then loads weather directly from coordinates.
+ */
 async function loadWeatherByLocation() {
     if (!navigator.geolocation) {
         showError(DOM, "Your browser does not support geolocation");
@@ -160,21 +178,7 @@ async function loadWeatherByLocation() {
         async (position) => {
             const { latitude, longitude } = position.coords;
 
-            let cityName = null;
-            try {
-                const reverseUrl = `https://geocoding-api.open-meteo.com/v1/search?latitude=${latitude}&longitude=${longitude}&count=1`;
-                const reverseRes = await fetch(reverseUrl);
-                const reverseData = await reverseRes.json();
-                cityName = reverseData.results?.[0]?.name ?? null;
-            } catch (e) {
-                // reverse geocode failed; fall back to coordinate-direct fetch
-            }
-
-            if (cityName) {
-                fetchWeather(cityName, DOM, getIsCelsius, getLastTemp, setLastTemp, setLastFeelsLike);
-            } else {
-                fetchWeather("📍 Current Location", DOM, getIsCelsius, getLastTemp, setLastTemp, setLastFeelsLike, { latitude, longitude });
-            }
+            fetchWeather("Current Location", DOM, getIsCelsius, getLastTemp, setLastTemp, setLastFeelsLike, { latitude, longitude });
         },
         (error) => {
             console.error("Geolocation error:", error);
@@ -184,6 +188,7 @@ async function loadWeatherByLocation() {
     );
 }
 
+// Main user actions: search, switch units, use geolocation, and clear history.
 DOM.searchForm.addEventListener("submit", function (e) {
     e.preventDefault();
     const city = DOM.searchInput.value.trim();
@@ -214,7 +219,10 @@ if (clearHistoryBtn) {
         if (confirm("Are you sure you want to clear all search history?")) {
             localStorage.removeItem("history");
             renderHistory(DOM, doFetchWeather);
-            showError(DOM, "History cleared!");
+            if (DOM.errorDiv) {
+                DOM.errorDiv.textContent = "History cleared!";
+                DOM.errorDiv.style.display = "block";
+            }
             setTimeout(() => {
                 if (DOM.errorDiv) DOM.errorDiv.style.display = "none";
             }, 1500);
