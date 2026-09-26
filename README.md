@@ -2,7 +2,7 @@
 
 Weather App is a browser-based project built with HTML, CSS, and JavaScript. It uses the free Open-Meteo APIs, so it does not require registration, API keys, or a backend server.
 
-[Live Preview](https://thebestweather-app.netlify.app/)
+[Live Preview](https://my-weather-app-project.pages.dev/)
 
 ## Features
 
